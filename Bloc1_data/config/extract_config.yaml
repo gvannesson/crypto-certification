@@ -1,0 +1,28 @@
+save_dir:
+  cryptodownload: "data/external/cryptodownload"
+  coinmarketcap: "data/external/coinmarketcap"
+
+cryptodownload:
+  json_urls:
+    binance_h_m: "https://api.cryptodatadownload.com/v1/data/ohlc/binance/guest/spot/available?_=1740047643800&format=json"
+    binance_d: "https://api.cryptodatadownload.com/v1/data/ohlc/binance/available?_=1752854076487&format=json"
+    gemini_m: "https://api.cryptodatadownload.com/v1/data/ohlc/gemini/guest/available?_=1740057730875&format=json"
+    gemini_h_d: "https://api.cryptodatadownload.com/v1/data/ohlc/gemini/available?_=1752940667446&format=json"
+    bitstamp_m: "https://api.cryptodatadownload.com/v1/data/ohlc/bitstamp/guest/spot/available?_=1740058272110&format=json"
+    bitstamp_h_d: "https://api.cryptodatadownload.com/v1/data/ohlc/bitstamp/available?_=1752940695157&format=json"
+
+coinmarketcap:
+  maps:
+    cryptocurrency_map: "https://pro-api.coinmarketcap.com/v1/cryptocurrency/map"
+    fiat_map: "https://pro-api.coinmarketcap.com/v1/fiat/map"
+    exchange_map: "https://pro-api.coinmarketcap.com/v1/exchange/map"
+
+trading_pairs:
+  - base_name: "Bitcoin"
+    quote_name: "United States Dollar"
+    timeframes: ["hour", "day"]
+    from_year: 2020
+  - base_name: "Bitcoin"
+    quote_name: "Tether USDt"
+    timeframes: ["hour", "day"]
+    from_year: 2020

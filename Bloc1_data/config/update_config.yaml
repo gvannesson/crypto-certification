@@ -1,0 +1,9 @@
+binance_ohlcv_url: "https://api.binance.com/api/v3/klines"
+
+trading_pairs:
+  - base_name: "Bitcoin"
+    quote_name: "Tether USDt"
+    timeframes: ["hour", "day"]
+  - base_name: "Bitcoin"
+    quote_name: "United States Dollar"
+    timeframes: ["hour", "day"]
