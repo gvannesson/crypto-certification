@@ -1,0 +1,29 @@
+groups:
+  - name: api_alerts
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Taux d'erreur élevé sur {{ $labels.service }}"
+          description: "Plus de 5% des requêtes retournent une erreur 5xx sur {{ $labels.service }} (valeur actuelle : {{ $value | humanizePercentage }})"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latence élevée sur {{ $labels.service }}"
+          description: "Le p95 de latence dépasse 5 secondes sur {{ $labels.service }}"
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service indisponible : {{ $labels.job }}"
+          description: "Le service {{ $labels.job }} ne répond plus depuis plus d'une minute."

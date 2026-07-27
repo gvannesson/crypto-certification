@@ -1,0 +1,194 @@
+version: "3.8"
+
+services:
+  # === Base de données ===
+  db:
+    image: postgres:16
+    container_name: crypto-db
+    environment:
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # === Bloc1 — DATA LAYER ===
+  data-scripts:
+    build:
+      context: ./Bloc1_data
+      dockerfile: scripts.Dockerfile
+    container_name: data-scripts
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - CMC_API_KEY=${CMC_API_KEY}
+      - API_E1_SCRIPT_USERNAME=${API_E1_SCRIPT_USERNAME}
+      - API_E1_SCRIPT_PASSWORD=${API_E1_SCRIPT_PASSWORD}
+      - API_E1_SCRIPT_ROLE=${API_E1_SCRIPT_ROLE}
+    volumes:
+      - bloc1_logs:/app/data/logs
+      - ./Bloc1_data/config:/app/config:ro
+    restart: always
+
+  data-api:
+    build:
+      context: ./Bloc1_data
+      dockerfile: api.Dockerfile
+    container_name: data-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - API_E1_SECRET_KEY=${API_E1_SECRET_KEY}
+      - API_E1_ALGORITHM=${API_E1_ALGORITHM}
+    ports:
+      - "8003:8001"
+    volumes:
+      - ./Bloc1_data/config:/app/config:ro
+    restart: always
+
+  # === Bloc3 — ML LAYER ===
+  ml-pipeline:
+    build:
+      context: ./Bloc3_ml
+      dockerfile: pipeline.Dockerfile
+    container_name: ml-pipeline
+    depends_on:
+      - data-api
+      - mlflow-server
+    environment:
+      - API_E1_BASE_URL=http://data-api:8001
+      - API_E1_SCRIPT_USERNAME=${API_E1_SCRIPT_USERNAME}
+      - API_E1_SCRIPT_PASSWORD=${API_E1_SCRIPT_PASSWORD}
+      - MLFLOW_TRACKING_URI=http://mlflow-server:5000
+      - MODELS_DIR_PATH=/app/models
+    volumes:
+      - ml_models:/app/models
+      - mlruns:/app/mlruns
+      - ./Bloc3_ml/config:/app/config:ro
+    restart: always
+
+  mlflow-server:
+    build:
+      context: ./Bloc3_ml
+      dockerfile: mlflow.Dockerfile
+    container_name: mlflow-server
+    environment:
+      - MLFLOW_SERVER_ALLOWED_HOSTS=mlflow-server,mlflow-server:5000,localhost,127.0.0.1
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlruns:/app/mlruns
+    restart: always
+
+  ml-api:
+    build:
+      context: ./Bloc3_ml
+      dockerfile: api.Dockerfile
+    container_name: ml-api
+    depends_on:
+      - data-api
+    environment:
+      - API_E1_BASE_URL=http://data-api:8001
+      - API_E1_SCRIPT_USERNAME=${API_E1_SCRIPT_USERNAME}
+      - API_E1_SCRIPT_PASSWORD=${API_E1_SCRIPT_PASSWORD}
+      - API_E3_SECRET_KEY=${API_E3_SECRET_KEY}
+      - API_E3_ALGORITHM=${API_E3_ALGORITHM}
+      - API_E3_USERNAME=${API_E3_USERNAME}
+      - API_E3_PASSWORD=${API_E3_PASSWORD}
+      - MODELS_DIR_PATH=/app/models
+    ports:
+      - "8002:8002"
+    volumes:
+      - ml_models:/app/models:ro
+      - ./Bloc3_ml/config:/app/config:ro
+    restart: always
+
+  # === Bloc4 — APPLICATION WEB (Django) ===
+  webapp:
+    build:
+      context: ./Bloc4_app
+      dockerfile: app.Dockerfile
+    container_name: webapp
+    depends_on:
+      db:
+        condition: service_healthy
+      data-api:
+        condition: service_started
+      ml-api:
+        condition: service_started
+    environment:
+      - API_E1_BASE_URL=http://data-api:8001
+      - API_E3_BASE_URL=http://ml-api:8002
+      - API_E1_SCRIPT_USERNAME=${API_E1_SCRIPT_USERNAME}
+      - API_E1_SCRIPT_PASSWORD=${API_E1_SCRIPT_PASSWORD}
+      - API_E3_USERNAME=${API_E3_USERNAME}
+      - API_E3_PASSWORD=${API_E3_PASSWORD}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_DB_NAME=${DJANGO_DB_NAME}
+      - DJANGO_DB_USER=${DJANGO_DB_USER}
+      - DJANGO_DB_PASSWORD=${DJANGO_DB_PASSWORD}
+      - DJANGO_DB_HOST=db
+      - DJANGO_DB_PORT=5432
+      - DEBUG=False
+    ports:
+      - "8090:8080"
+    volumes:
+      - bloc4_logs:/app/logs
+    restart: always
+
+  # === Monitoring ===
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: always
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: grafana
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    restart: always
+
+volumes:
+  postgres_data:
+  bloc1_logs:
+  ml_models:
+  mlruns:
+  bloc4_logs:
+  prometheus_data:
+  grafana_data:

@@ -1,0 +1,21 @@
+pair_models:
+  - symbol: "BTC-USDT"
+    base_currency: "BTC"
+    quote_currency: "USDT"
+    granularity_type: "daily"
+    model: "xgboost"
+    feature_lags: 7
+    params:
+      n_estimators: 200
+      max_depth: 6
+      learning_rate: 0.1
+  - symbol: "BTC-USD"
+    base_currency: "BTC"
+    quote_currency: "USD"
+    granularity_type: "daily"
+    model: "xgboost"
+    feature_lags: 7
+    params:
+      n_estimators: 200
+      max_depth: 6
+      learning_rate: 0.1

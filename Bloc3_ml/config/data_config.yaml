@@ -1,0 +1,17 @@
+E1_api_endpoints:
+  login: "/api/v1/authentification/login"
+  trading_pair_by_symbols: "/api/v1/trading_pairs/trading_pair_by_currency_symbols"
+  ohlcv:
+    hourly: "/api/v1/ohlcv/hourly_by_trading_pair_id"
+    daily: "/api/v1/ohlcv/daily_by_trading_pair_id"
+  post_predictions:
+    hourly: "/api/v1/predictions/hourly"
+    daily: "/api/v1/predictions/daily"
+
+trading_pairs:
+  - symbol: "BTC-USDT"
+    base_symbol: "BTC"
+    quote_symbol: "USDT"
+  - symbol: "BTC-USD"
+    base_symbol: "BTC"
+    quote_symbol: "USD"

@@ -1,0 +1,27 @@
+[project]
+name = "bloc4-app"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "django>=5.1.0",
+    "gunicorn>=23.0.0",
+    "requests>=2.32.0",
+    "python-dotenv>=1.0.0",
+    "psycopg2-binary>=2.9.9",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-django>=4.8.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.8.0",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "crypto_app.settings"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 120

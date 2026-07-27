@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Graphiques{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Graphiques OHLCV & Prédictions</h2>
+
+<div class="row mb-3">
+    <div class="col-md-3">
+        <select id="pair-select" class="form-select">
+            {% for pair in pairs %}
+            <option value="{{ pair.base }}-{{ pair.quote }}">{{ pair.label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select id="granularity-select" class="form-select">
+            <option value="daily">Journalier</option>
+            <option value="hourly">Horaire</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button id="load-chart" class="btn btn-primary w-100">Charger</button>
+    </div>
+</div>
+
+<div id="chart-container" style="width:100%; height:500px;"></div>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+document.getElementById('load-chart').addEventListener('click', function() {
+    const pair = document.getElementById('pair-select').value.split('-');
+    const granularity = document.getElementById('granularity-select').value;
+
+    fetch(`/dashboard/api/chart-data/?base=${pair[0]}&quote=${pair[1]}&granularity=${granularity}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { alert(data.error); return; }
+
+            const ohlcv = data.ohlcv;
+            const predictions = data.predictions;
+
+            const candlestick = {
+                x: ohlcv.map(d => d.date),
+                open: ohlcv.map(d => d.open),
+                high: ohlcv.map(d => d.high),
+                low: ohlcv.map(d => d.low),
+                close: ohlcv.map(d => d.close),
+                type: 'candlestick',
+                name: 'OHLCV'
+            };
+
+            const colors = predictions.map(p => {
+                if (p.predicted_label === 'UP') return 'green';
+                if (p.predicted_label === 'DOWN') return 'red';
+                return 'gray';
+            });
+
+            const predTrace = {
+                x: predictions.map(p => p.date),
+                y: predictions.map(() => null),
+                mode: 'markers',
+                marker: { color: colors, size: 8, symbol: 'diamond' },
+                name: 'Prédictions',
+                yaxis: 'y2'
+            };
+
+            const layout = {
+                title: `${pair[0]}/${pair[1]} — ${granularity}`,
+                xaxis: { title: 'Date', rangeslider: { visible: false } },
+                yaxis: { title: 'Prix (USD)' },
+                template: 'plotly_white'
+            };
+
+            Plotly.newPlot('chart-container', [candlestick], layout);
+        });
+});
+
+document.getElementById('load-chart').click();
+</script>
+{% endblock %}

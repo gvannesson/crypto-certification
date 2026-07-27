@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 import uvicorn
 
 ROOT_DIR = Path(__file__).parent.parent.parent
@@ -20,6 +21,8 @@ app.include_router(login.router, prefix="/api/v1")
 app.include_router(trading_pairs.router, prefix="/api/v1")
 app.include_router(ohlcv.router, prefix="/api/v1")
 app.include_router(predictions.router, prefix="/api/v1")
+
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 
 @app.get("/")

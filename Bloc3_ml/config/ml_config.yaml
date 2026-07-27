@@ -1,0 +1,47 @@
+models_config:
+  xgboost:
+    module: "xgboost"
+    class: "XGBClassifier"
+    default_params:
+      n_estimators: 200
+      max_depth: 6
+      learning_rate: 0.1
+      objective: "multi:softprob"
+      num_class: 3
+      eval_metric: "mlogloss"
+      use_label_encoder: false
+  random_forest:
+    module: "sklearn.ensemble"
+    class: "RandomForestClassifier"
+    default_params:
+      n_estimators: 200
+      max_depth: 10
+      random_state: 42
+      class_weight: "balanced"
+  logistic_regression:
+    module: "sklearn.linear_model"
+    class: "LogisticRegression"
+    default_params:
+      max_iter: 1000
+      multi_class: "multinomial"
+      solver: "lbfgs"
+      class_weight: "balanced"
+
+classification:
+  seuil: 0.005
+  labels:
+    0: "DOWN"
+    1: "STABLE"
+    2: "UP"
+
+dates_by_granularity:
+  daily:
+    training_start: "2020-01-01"
+    training_end: "2024-12-31"
+    test_start: "2025-01-01"
+    test_end: "2025-05-31"
+  hourly:
+    training_start: "2024-01-01"
+    training_end: "2024-12-31"
+    test_start: "2025-01-01"
+    test_end: "2025-03-31"

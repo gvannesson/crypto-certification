@@ -1,0 +1,152 @@
+name: CI — Tests & Lint
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test-bloc1:
+    name: Bloc1 Data — Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Bloc1_data
+
+    env:
+      DB_USERNAME: test
+      DB_PASSWORD: test
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_NAME: test_db
+      API_E1_SECRET_KEY: ci-test-secret-key
+      API_E1_ALGORITHM: HS256
+      API_E1_SCRIPT_USERNAME: script_bot
+      API_E1_SCRIPT_PASSWORD: script_pass
+      API_E1_SCRIPT_ROLE: script
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run tests with coverage
+        run: uv run pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-bloc1
+          path: Bloc1_data/coverage.xml
+
+  test-bloc3:
+    name: Bloc3 ML — Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Bloc3_ml
+
+    env:
+      API_E1_BASE_URL: http://localhost:8001
+      API_E3_SECRET_KEY: ci-test-secret-key
+      API_E3_ALGORITHM: HS256
+      API_E3_USERNAME: ml_user
+      API_E3_PASSWORD: ml_password
+      MODELS_DIR_PATH: /tmp/test_models
+      MLFLOW_TRACKING_URI: http://localhost:5000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run tests with coverage
+        run: uv run pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-bloc3
+          path: Bloc3_ml/coverage.xml
+
+  test-bloc4:
+    name: Bloc4 App — Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Bloc4_app
+
+    env:
+      DJANGO_SECRET_KEY: ci-test-secret-key
+      DJANGO_DB_ENGINE: django.db.backends.sqlite3
+      DJANGO_DB_NAME: ":memory:"
+      API_E1_BASE_URL: http://localhost:8001
+      API_E3_BASE_URL: http://localhost:8002
+      API_E1_SCRIPT_USERNAME: script_user
+      API_E1_SCRIPT_PASSWORD: script_pass
+      API_E3_USERNAME: ml_user
+      API_E3_PASSWORD: ml_pass
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run tests with coverage
+        run: uv run pytest tests/ -v --cov=accounts --cov=dashboard --cov=forecast --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-bloc4
+          path: Bloc4_app/coverage.xml
+
+  lint:
+    name: Lint — Ruff
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install ruff
+        run: uv tool install ruff
+
+      - name: Lint Bloc1_data
+        run: ruff check Bloc1_data/src/ --output-format=github
+
+      - name: Lint Bloc3_ml
+        run: ruff check Bloc3_ml/src/ --output-format=github
+
+      - name: Lint Bloc4_app
+        run: ruff check Bloc4_app/ --output-format=github --ignore=E501

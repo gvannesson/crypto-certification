@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alerts.yml"
+
+scrape_configs:
+  - job_name: "data-api"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["data-api:8001"]
+        labels:
+          service: "bloc1-data-api"
+
+  - job_name: "ml-api"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["ml-api:8002"]
+        labels:
+          service: "bloc3-ml-api"
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
