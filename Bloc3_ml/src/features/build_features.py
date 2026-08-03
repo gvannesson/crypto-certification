@@ -7,7 +7,7 @@ import numpy as np
 from src.settings import MLSettings, logger
 
 
-def build_features(df, granularity_type, feature_lags):
+def build_features(df, granularity_type, feature_lags, include_target=True):
     """Pipeline complet : lags + returns + indicateurs techniques + encodage temporel + variable cible."""
     df = df.copy()
     df = df.sort_values("date").set_index("date")
@@ -16,8 +16,9 @@ def build_features(df, granularity_type, feature_lags):
     df = add_return_features(df, granularity_type)
     df = add_technical_indicators(df)
     df = add_temporal_features(df, granularity_type)
-    df = add_target(df)
-    df = df.dropna().reset_index()
+    if include_target:
+        df = add_target(df)
+    df = df.dropna(subset=[c for c in df.columns if c != "target"]).reset_index()
 
     return df
 
@@ -76,9 +77,13 @@ def add_temporal_features(df, granularity_type):
 
 
 def add_target(df):
-    """Construit la variable cible ternaire (DOWN=0, STABLE=1, UP=2)."""
+    """Construit la variable cible ternaire (DOWN=0, STABLE=1, UP=2).
+
+    La cible est la variation de la PROCHAINE bougie (shift -1),
+    pour que le modèle apprenne à prédire le futur et non le passé.
+    """
     seuil = MLSettings.classification["seuil"]
-    df["variation"] = df["close"].pct_change(1)
+    df["variation"] = df["close"].pct_change(1).shift(-1)
     df["target"] = pd.cut(
         df["variation"],
         bins=[-float("inf"), -seuil, seuil, float("inf")],

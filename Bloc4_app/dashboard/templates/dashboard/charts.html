@@ -6,18 +6,40 @@
 {% block content %}
 <h2 class="mb-4">Graphiques OHLCV & Prédictions</h2>
 
-<div class="row mb-3">
-    <div class="col-md-3">
+<div class="row mb-3 align-items-end">
+    <div class="col-md-2">
+        <label class="form-label small text-muted">Paire</label>
         <select id="pair-select" class="form-select">
             {% for pair in pairs %}
             <option value="{{ pair.base }}-{{ pair.quote }}">{{ pair.label }}</option>
             {% endfor %}
         </select>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
+        <label class="form-label small text-muted">Granularité</label>
         <select id="granularity-select" class="form-select">
             <option value="daily">Journalier</option>
             <option value="hourly">Horaire</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small text-muted">Date début</label>
+        <input type="date" id="date-start" class="form-control">
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small text-muted">Date fin</label>
+        <input type="date" id="date-end" class="form-control">
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small text-muted">Période rapide</label>
+        <select id="period-preset" class="form-select">
+            <option value="">Personnalisé</option>
+            <option value="7">7 jours</option>
+            <option value="30" selected>30 jours</option>
+            <option value="90">3 mois</option>
+            <option value="180">6 mois</option>
+            <option value="365">1 an</option>
+            <option value="all">Tout</option>
         </select>
     </div>
     <div class="col-md-2">
@@ -29,6 +51,42 @@
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
+const dateStart = document.getElementById('date-start');
+const dateEnd = document.getElementById('date-end');
+const periodPreset = document.getElementById('period-preset');
+
+function setDatesFromPreset() {
+    const val = periodPreset.value;
+    if (!val || val === 'all') {
+        dateStart.value = '';
+        dateEnd.value = '';
+        return;
+    }
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - parseInt(val));
+    dateStart.value = start.toISOString().slice(0, 10);
+    dateEnd.value = end.toISOString().slice(0, 10);
+}
+
+periodPreset.addEventListener('change', setDatesFromPreset);
+dateStart.addEventListener('change', () => { periodPreset.value = ''; });
+dateEnd.addEventListener('change', () => { periodPreset.value = ''; });
+
+setDatesFromPreset();
+
+function filterByDateRange(items, dateField) {
+    const start = dateStart.value;
+    const end = dateEnd.value;
+    if (!start && !end) return items;
+    return items.filter(d => {
+        const dt = d[dateField].slice(0, 10);
+        if (start && dt < start) return false;
+        if (end && dt > end) return false;
+        return true;
+    });
+}
+
 document.getElementById('load-chart').addEventListener('click', function() {
     const pair = document.getElementById('pair-select').value.split('-');
     const granularity = document.getElementById('granularity-select').value;
@@ -38,8 +96,8 @@ document.getElementById('load-chart').addEventListener('click', function() {
         .then(data => {
             if (data.error) { alert(data.error); return; }
 
-            const ohlcv = data.ohlcv;
-            const predictions = data.predictions;
+            const ohlcv = filterByDateRange(data.ohlcv, 'date');
+            const predictions = filterByDateRange(data.predictions, 'date');
 
             const candlestick = {
                 x: ohlcv.map(d => d.date),
@@ -51,29 +109,42 @@ document.getElementById('load-chart').addEventListener('click', function() {
                 name: 'OHLCV'
             };
 
-            const colors = predictions.map(p => {
-                if (p.predicted_label === 'UP') return 'green';
-                if (p.predicted_label === 'DOWN') return 'red';
-                return 'gray';
-            });
+            const traces = [candlestick];
 
-            const predTrace = {
-                x: predictions.map(p => p.date),
-                y: predictions.map(() => null),
-                mode: 'markers',
-                marker: { color: colors, size: 8, symbol: 'diamond' },
-                name: 'Prédictions',
-                yaxis: 'y2'
-            };
+            if (predictions.length > 0) {
+                const priceLookup = {};
+                ohlcv.forEach(d => { priceLookup[d.date.slice(0, 10)] = d.close; });
+                const lastClose = ohlcv.length > 0 ? ohlcv[ohlcv.length - 1].close : null;
+
+                const predTrace = {
+                    x: predictions.map(p => p.date),
+                    y: predictions.map(p => priceLookup[p.date.slice(0, 10)] || lastClose),
+                    mode: 'markers',
+                    marker: {
+                        color: predictions.map(p =>
+                            p.predicted_label === 'UP' ? '#2ca02c' :
+                            p.predicted_label === 'DOWN' ? '#d62728' : '#7f7f7f'
+                        ),
+                        size: 10,
+                        symbol: 'diamond',
+                        line: { width: 1, color: '#333' }
+                    },
+                    name: 'Prédictions',
+                    text: predictions.map(p => `${p.predicted_label} (${(p.confidence * 100).toFixed(1)}%)`),
+                    hoverinfo: 'text+x'
+                };
+                traces.push(predTrace);
+            }
 
             const layout = {
-                title: `${pair[0]}/${pair[1]} — ${granularity}`,
+                title: `${pair[0]}/${pair[1]} — ${granularity === 'daily' ? 'Journalier' : 'Horaire'}`,
                 xaxis: { title: 'Date', rangeslider: { visible: false } },
                 yaxis: { title: 'Prix (USD)' },
-                template: 'plotly_white'
+                template: 'plotly_white',
+                height: 500
             };
 
-            Plotly.newPlot('chart-container', [candlestick], layout);
+            Plotly.newPlot('chart-container', traces, layout, {responsive: true});
         });
 });
 

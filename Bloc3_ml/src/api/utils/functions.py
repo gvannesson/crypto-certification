@@ -48,9 +48,9 @@ def fetch_recent_ohlcv(symbol: str, granularity: str):
 
 
 def build_features_for_prediction(df, granularity):
-    """Construit les features à partir des OHLCV pour la prédiction."""
+    """Construit les features à partir des OHLCV pour la prédiction (sans cible)."""
     lags = 24 if granularity == "hourly" else 7
-    return build_features(df, granularity, lags)
+    return build_features(df, granularity, lags, include_target=False)
 
 
 def _get_e1_token():

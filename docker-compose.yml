@@ -92,7 +92,8 @@ services:
       dockerfile: mlflow.Dockerfile
     container_name: mlflow-server
     environment:
-      - MLFLOW_SERVER_ALLOWED_HOSTS=mlflow-server,mlflow-server:5000,localhost,127.0.0.1
+      - MLFLOW_SERVER_ALLOWED_HOSTS=mlflow-server,mlflow-server:*,localhost,localhost:*,127.0.0.1,127.0.0.1:*,0.0.0.0,0.0.0.0:*
+      - MLFLOW_ALLOW_FILE_STORE=true
     ports:
       - "5000:5000"
     volumes:

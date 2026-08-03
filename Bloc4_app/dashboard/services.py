@@ -46,10 +46,9 @@ class DashboardService:
         return []
 
     def get_predictions(self, trading_pair_id, granularity="daily"):
-        endpoint = f"hourly_by_trading_pair_id" if granularity == "hourly" else "daily_by_trading_pair_id"
+        endpoint = "hourly_by_trading_pair_id" if granularity == "hourly" else "daily_by_trading_pair_id"
         response = requests.get(
-            f"{self.base_url}/api/v1/predictions/{endpoint}",
-            params={"trading_pair_id": trading_pair_id},
+            f"{self.base_url}/api/v1/predictions/{endpoint}/{trading_pair_id}",
             headers=self._headers(),
         )
         if response.status_code == 200:

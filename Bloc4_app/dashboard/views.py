@@ -24,6 +24,8 @@ def dashboard_view(request):
 
         predictions = service.get_predictions(tp["id"], "daily")
         last_pred = predictions[-1] if predictions else None
+        if last_pred and "confidence" in last_pred:
+            last_pred["confidence_pct"] = last_pred["confidence"] * 100
 
         ohlcv = service.get_ohlcv(tp["id"], "daily")
         last_price = ohlcv[-1]["close"] if ohlcv else None

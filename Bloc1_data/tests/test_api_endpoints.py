@@ -137,3 +137,85 @@ class TestPredictions:
             headers=auth_headers,
         )
         assert response.status_code == 200
+
+
+class TestPredictionsCRUD:
+    def test_update_prediction_hourly_success(self, client, script_headers, mock_db):
+        existing = type("Pred", (), {"id": 1, "predicted_class": 2, "predicted_label": "UP"})()
+        mock_db.prediction_hourly.get.return_value = existing
+        updated = type("Pred", (), {
+            "id": 1, "trading_pair_id": 1, "date": "2025-01-01",
+            "predicted_class": 0, "predicted_label": "DOWN", "confidence": 0.9, "model_name": "xgb"
+        })()
+        mock_db.prediction_hourly.update.return_value = updated
+
+        response = client.put(
+            "/api/v1/predictions/hourly/1",
+            json={"predicted_class": 0, "predicted_label": "DOWN"},
+            headers=script_headers,
+        )
+        assert response.status_code == 200
+        mock_db.prediction_hourly.update.assert_called_once()
+
+    def test_update_prediction_hourly_not_found(self, client, script_headers, mock_db):
+        mock_db.prediction_hourly.get.return_value = None
+
+        response = client.put(
+            "/api/v1/predictions/hourly/999",
+            json={"predicted_class": 0},
+            headers=script_headers,
+        )
+        assert response.status_code == 404
+
+    def test_update_prediction_hourly_user_role_forbidden(self, client, auth_headers):
+        response = client.put(
+            "/api/v1/predictions/hourly/1",
+            json={"predicted_class": 0},
+            headers=auth_headers,
+        )
+        assert response.status_code == 403
+
+    def test_update_prediction_daily_success(self, client, script_headers, mock_db):
+        existing = type("Pred", (), {"id": 1, "predicted_class": 1, "predicted_label": "NEUTRAL"})()
+        mock_db.prediction_daily.get.return_value = existing
+        updated = type("Pred", (), {
+            "id": 1, "trading_pair_id": 1, "date": "2025-01-01",
+            "predicted_class": 2, "predicted_label": "UP", "confidence": 0.75, "model_name": "xgb"
+        })()
+        mock_db.prediction_daily.update.return_value = updated
+
+        response = client.put(
+            "/api/v1/predictions/daily/1",
+            json={"predicted_class": 2, "predicted_label": "UP"},
+            headers=script_headers,
+        )
+        assert response.status_code == 200
+
+    def test_delete_prediction_hourly_success(self, client, script_headers, mock_db):
+        existing = type("Pred", (), {"id": 1})()
+        mock_db.prediction_hourly.get.return_value = existing
+
+        response = client.delete("/api/v1/predictions/hourly/1", headers=script_headers)
+
+        assert response.status_code == 200
+        assert "deleted" in response.json()["message"].lower()
+        mock_db.prediction_hourly.delete.assert_called_once_with(1)
+
+    def test_delete_prediction_hourly_not_found(self, client, script_headers, mock_db):
+        mock_db.prediction_hourly.get.return_value = None
+
+        response = client.delete("/api/v1/predictions/hourly/999", headers=script_headers)
+        assert response.status_code == 404
+
+    def test_delete_prediction_daily_success(self, client, script_headers, mock_db):
+        existing = type("Pred", (), {"id": 1})()
+        mock_db.prediction_daily.get.return_value = existing
+
+        response = client.delete("/api/v1/predictions/daily/1", headers=script_headers)
+
+        assert response.status_code == 200
+        mock_db.prediction_daily.delete.assert_called_once_with(1)
+
+    def test_delete_prediction_daily_user_role_forbidden(self, client, auth_headers):
+        response = client.delete("/api/v1/predictions/daily/1", headers=auth_headers)
+        assert response.status_code == 403

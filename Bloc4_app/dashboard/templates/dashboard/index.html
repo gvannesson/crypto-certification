@@ -28,7 +28,7 @@
                 </p>
                 {% if pair.last_prediction.confidence %}
                 <p class="text-muted small mb-0">
-                    Confiance : {{ pair.last_prediction.confidence|floatformat:1 }}%
+                    Confiance : {{ pair.last_prediction.confidence_pct|floatformat:1 }}%
                 </p>
                 {% endif %}
                 <p class="text-muted small">Date : {{ pair.last_prediction.date }}</p>

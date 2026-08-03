@@ -86,19 +86,53 @@ L'agrégation des données OHLCV suit ce processus :
 
 ### Endpoints principaux
 
+#### Authentification & Gestion utilisateur
+
 | Méthode | Endpoint | Description | Auth |
 |---------|----------|-------------|------|
-| POST | `/api/v1/login` | Obtenir un token JWT | Non |
+| POST | `/api/v1/authentification/login` | Obtenir un token JWT | Non |
+| POST | `/api/v1/authentification/register` | Créer un compte utilisateur | Non |
+| GET | `/api/v1/authentification/me` | Profil de l'utilisateur connecté | JWT |
+| PUT | `/api/v1/authentification/password` | Modifier son mot de passe | JWT |
+| DELETE | `/api/v1/authentification/account` | Supprimer son compte | JWT |
+
+#### Données de marché
+
+| Méthode | Endpoint | Description | Auth |
+|---------|----------|-------------|------|
 | GET | `/api/v1/ohlcv/daily_by_trading_pair_id` | Données OHLCV journalières | JWT |
 | GET | `/api/v1/ohlcv/hourly_by_trading_pair_id` | Données OHLCV horaires | JWT |
+| GET | `/api/v1/ohlcv/minute_by_trading_pair_id` | Données OHLCV à la minute | JWT |
 | GET | `/api/v1/trading_pairs/all` | Liste des paires par symbole | JWT |
+| GET | `/api/v1/trading_pairs/trading_pair_by_currency_symbols` | Paire par symboles base/quote | JWT |
+
+#### Prédictions (CRUD complet)
+
+| Méthode | Endpoint | Description | Auth |
+|---------|----------|-------------|------|
+| POST | `/api/v1/predictions/hourly` | Créer une prédiction horaire | JWT + script |
+| POST | `/api/v1/predictions/daily` | Créer une prédiction journalière | JWT + script |
+| GET | `/api/v1/predictions/hourly_by_trading_pair_id/{id}` | Lister les prédictions horaires | JWT |
+| GET | `/api/v1/predictions/daily_by_trading_pair_id/{id}` | Lister les prédictions journalières | JWT |
+| GET | `/api/v1/predictions/last_hourly_by_trading_pair_id/{id}` | Dernière prédiction horaire | JWT |
+| GET | `/api/v1/predictions/last_daily_by_trading_pair_id/{id}` | Dernière prédiction journalière | JWT |
+| PUT | `/api/v1/predictions/hourly/{id}` | Modifier une prédiction horaire | JWT + script |
+| PUT | `/api/v1/predictions/daily/{id}` | Modifier une prédiction journalière | JWT + script |
+| DELETE | `/api/v1/predictions/hourly/{id}` | Supprimer une prédiction horaire | JWT + script |
+| DELETE | `/api/v1/predictions/daily/{id}` | Supprimer une prédiction journalière | JWT + script |
+
+#### Monitoring
+
+| Méthode | Endpoint | Description | Auth |
+|---------|----------|-------------|------|
 | GET | `/metrics` | Métriques Prometheus | Non |
 | GET | `/health` | Healthcheck | Non |
 
 ### Authentification
 - JWT (python-jose) avec secret configurable
-- Expiration configurable
-- Rôles : `user`, `script`
+- Hashing bcrypt (passlib) pour les mots de passe
+- Expiration configurable (30 min par défaut)
+- Rôles : `user` (lecture), `script` (lecture + écriture prédictions)
 
 ## Scraping web (C1 — mix de sources)
 

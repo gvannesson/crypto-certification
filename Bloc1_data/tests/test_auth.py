@@ -69,6 +69,55 @@ class TestLogin:
         assert "already registered" in response.json()["detail"]
 
 
+class TestUserProfile:
+    def test_get_current_user_profile(self, client, auth_headers, mock_user):
+        response = client.get("/api/v1/authentification/me", headers=auth_headers)
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["username"] == "testuser"
+        assert body["role"] == "user"
+        assert body["status"] == "active"
+
+    def test_get_profile_without_token_returns_401(self, client):
+        response = client.get("/api/v1/authentification/me")
+        assert response.status_code == 401
+
+    def test_update_password_success(self, client, auth_headers, mock_db):
+        with patch("src.C5_api.routes.login.verify_password", return_value=True):
+            response = client.put(
+                "/api/v1/authentification/password",
+                json={"current_password": "oldpass", "new_password": "newpass123"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 200
+        assert "updated" in response.json()["message"].lower()
+        mock_db.users.update.assert_called_once()
+
+    def test_update_password_wrong_current(self, client, auth_headers):
+        with patch("src.C5_api.routes.login.verify_password", return_value=False):
+            response = client.put(
+                "/api/v1/authentification/password",
+                json={"current_password": "wrong", "new_password": "newpass123"},
+                headers=auth_headers,
+            )
+
+        assert response.status_code == 400
+        assert "incorrect" in response.json()["detail"].lower()
+
+    def test_delete_account_success(self, client, auth_headers, mock_db):
+        response = client.delete("/api/v1/authentification/account", headers=auth_headers)
+
+        assert response.status_code == 200
+        assert "deleted" in response.json()["message"].lower()
+        mock_db.users.delete.assert_called_once()
+
+    def test_delete_account_without_token_returns_401(self, client):
+        response = client.delete("/api/v1/authentification/account")
+        assert response.status_code == 401
+
+
 class TestAuthProtection:
     def test_endpoint_without_token_returns_401(self, client):
         response = client.get("/api/v1/ohlcv/daily_by_trading_pair_id", params={"trading_pair_id": 1})

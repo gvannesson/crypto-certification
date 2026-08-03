@@ -24,35 +24,20 @@
     </div>
 
     <div class="col-md-6">
-        {% if predictions %}
+        {% if prediction %}
         <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">Résultats</h5>
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Classe</th>
-                            <th>Confiance</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for pred in predictions %}
-                        <tr>
-                            <td>{{ pred.date }}</td>
-                            <td>
-                                <span class="badge
-                                    {% if pred.predicted_label == 'UP' %}bg-success
-                                    {% elif pred.predicted_label == 'DOWN' %}bg-danger
-                                    {% else %}bg-secondary{% endif %}">
-                                    {{ pred.predicted_label }}
-                                </span>
-                            </td>
-                            <td>{{ pred.confidence|floatformat:1 }}%</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="card-body text-center">
+                <h5 class="card-title">Prédiction pour le prochain pas de temps</h5>
+                <p class="text-muted small">{{ prediction.date }}</p>
+                <div class="my-3">
+                    <span class="badge fs-4 px-4 py-2
+                        {% if prediction.predicted_label == 'UP' %}bg-success
+                        {% elif prediction.predicted_label == 'DOWN' %}bg-danger
+                        {% else %}bg-secondary{% endif %}">
+                        {{ prediction.predicted_label }}
+                    </span>
+                </div>
+                <p class="fs-5">Confiance : {{ prediction.confidence_pct|floatformat:1 }}%</p>
             </div>
         </div>
         {% endif %}
