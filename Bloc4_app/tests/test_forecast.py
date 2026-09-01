@@ -42,7 +42,6 @@ class TestClassifyView(TestCase):
         mock_service.get_classification.assert_called_once_with(
             trading_pair_symbol="BTC-USDT",
             granularity="hourly",
-            num_pred="3",
         )
 
     @patch("forecast.views.ForecastService")

@@ -3,6 +3,7 @@
 from unittest.mock import patch, MagicMock
 
 import pytest
+import requests
 
 from dashboard.services import DashboardService
 from forecast.services import ForecastService
@@ -135,7 +136,7 @@ class TestForecastService:
         mock_post.side_effect = responses
 
         service = ForecastService()
-        result = service.get_classification("BTC-USDT", "daily", 1)
+        result = service.get_classification("BTC-USDT", "daily")
         assert "predictions" in result
 
     @patch("forecast.services.requests.post")
@@ -147,5 +148,31 @@ class TestForecastService:
         mock_post.side_effect = responses
 
         service = ForecastService()
-        result = service.get_classification("BTC-USDT", "daily", 1)
+        result = service.get_classification("BTC-USDT", "daily")
+        assert "error" in result
+
+    @patch("forecast.services.requests.post")
+    def test_get_classification_retries_once_on_expired_token(self, mock_post):
+        responses = [
+            MagicMock(status_code=200, json=lambda: {"access_token": "stale-token"}),
+            MagicMock(status_code=401),
+            MagicMock(status_code=200, json=lambda: {"access_token": "fresh-token"}),
+            MagicMock(status_code=200, json=lambda: {"predictions": [{"predicted_label": "UP"}]}),
+        ]
+        mock_post.side_effect = responses
+
+        service = ForecastService()
+        result = service.get_classification("BTC-USDT", "daily")
+        assert "predictions" in result
+        assert mock_post.call_count == 4
+
+    @patch("forecast.services.requests.post")
+    def test_get_classification_network_error_returns_error_dict(self, mock_post):
+        mock_post.side_effect = [
+            MagicMock(status_code=200, json=lambda: {"access_token": "token"}),
+            requests.exceptions.ConnectionError("boom"),
+        ]
+
+        service = ForecastService()
+        result = service.get_classification("BTC-USDT", "daily")
         assert "error" in result
