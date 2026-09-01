@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Monitorage du modèle{% endblock %}
+
+{% block content %}
+<h2 class="mb-2">Monitorage du modèle — dérive prédit / réalisé</h2>
+<p class="text-muted">
+    Compare chaque prédiction stockée à l'issue réellement observée sur les cours OHLCV.
+    Distinct du monitoring applicatif (Prometheus/Grafana) qui surveille la santé de l'API,
+    pas la qualité des prédictions.
+</p>
+
+<div class="btn-group mb-4" role="group">
+    <a href="?granularity=hourly" class="btn btn-outline-primary {% if granularity == 'hourly' %}active{% endif %}">Horaire</a>
+    <a href="?granularity=daily" class="btn btn-outline-primary {% if granularity == 'daily' %}active{% endif %}">Journalier</a>
+</div>
+
+{% for result in results %}
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="card-title">{{ result.label }}</h5>
+        <p class="text-muted small">{{ result.n_stored }} prédiction(s) stockée(s)</p>
+
+        {% if result.summary %}
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Modèle</th>
+                    <th>Prédictions évaluables</th>
+                    <th>Accuracy</th>
+                    <th>Direction accuracy</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in result.summary %}
+                <tr>
+                    <td>{{ row.model_name }}</td>
+                    <td>{{ row.n }}</td>
+                    <td>{{ row.accuracy_pct }}%</td>
+                    <td>{{ row.direction_accuracy_pct }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p class="text-muted small mb-3">
+            Accuracy inclut les cas STABLE→STABLE (majoritaires) ; direction accuracy les exclut
+            — voir §&nbsp;monitorage du rapport pour l'interprétation de l'écart entre les deux.
+        </p>
+
+        <details>
+            <summary class="mb-2">Détail des 20 dernières prédictions évaluées</summary>
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr><th>Date</th><th>Modèle</th><th>Prédit</th><th>Réalisé</th><th>Correct</th></tr>
+                </thead>
+                <tbody>
+                    {% for row in result.rows %}
+                    <tr class="{% if not row.correct %}table-warning{% endif %}">
+                        <td>{{ row.date }}</td>
+                        <td>{{ row.model_name }}</td>
+                        <td>{{ row.predicted }}</td>
+                        <td>{{ row.realized }}</td>
+                        <td>{% if row.correct %}✓{% else %}✗{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </details>
+        {% else %}
+        <div class="alert alert-info mb-0">
+            Aucune prédiction évaluable pour l'instant (issue réelle pas encore connue, ou
+            OHLCV pas encore synchronisé jusqu'à cette date).
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% empty %}
+<div class="alert alert-info">Aucune paire disponible.</div>
+{% endfor %}
+{% endblock %}

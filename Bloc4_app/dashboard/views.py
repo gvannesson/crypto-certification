@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 
 from .services import DashboardService
+from .metrics import compute_drift_metrics
 
 PAIRS = [
     {"base": "BTC", "quote": "USDT", "label": "BTC/USDT"},
@@ -42,6 +43,39 @@ def dashboard_view(request):
 @login_required
 def charts_view(request):
     return render(request, "dashboard/charts.html", {"pairs": PAIRS})
+
+
+@login_required
+def monitoring_view(request):
+    """Monitorage C11 — dérive du modèle : prédictions stockées vs issue réellement observée.
+
+    À ne pas confondre avec le monitoring applicatif (Prometheus/Grafana, cf.
+    docs/monitoring_applicatif.md), qui surveille la santé de l'API elle-même
+    (requêtes/s, erreurs HTTP) et non la qualité des prédictions du modèle.
+    """
+    granularity = request.GET.get("granularity", "hourly")
+    service = DashboardService()
+    results = []
+
+    for pair in PAIRS:
+        tp = service.get_trading_pair(pair["base"], pair["quote"])
+        if not tp:
+            continue
+        predictions = service.get_predictions(tp["id"], granularity)
+        ohlcv = service.get_ohlcv(tp["id"], granularity)
+        summary, rows = compute_drift_metrics(predictions, ohlcv)
+        results.append({
+            "label": pair["label"],
+            "n_stored": len(predictions),
+            "summary": summary,
+            "rows": rows[:20],
+        })
+
+    return render(
+        request,
+        "dashboard/monitoring.html",
+        {"results": results, "granularity": granularity},
+    )
 
 
 @login_required
