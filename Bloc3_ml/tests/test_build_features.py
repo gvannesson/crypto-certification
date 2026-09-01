@@ -64,7 +64,19 @@ class TestBuildFeatures:
 
     def test_build_features_no_nan_values(self, sample_ohlcv_daily):
         result = build_features(sample_ohlcv_daily, "daily", feature_lags=7)
-        assert result.isna().sum().sum() == 0
+        feature_cols = [c for c in result.columns if c != "target"]
+        assert result[feature_cols].isna().sum().sum() == 0
+
+    def test_build_features_last_row_has_nan_target_by_design(self, sample_ohlcv_daily):
+        # add_target() décale la variation de -1 (shift(-1)) pour prédire le futur :
+        # la dernière ligne n'a donc pas de cible connue, par construction — c'est
+        # cette ligne-là que l'inférence utilise pour prédire le pas suivant
+        # (cf. classify.py::_run_classification). dropna() exclut volontairement
+        # "target" (build_features.py:21) pour ne pas la supprimer.
+        result = build_features(sample_ohlcv_daily, "daily", feature_lags=7)
+        assert result["target"].isna().sum() == 1
+        assert result["target"].iloc[-1] != result["target"].iloc[-1]  # NaN != NaN
+        assert result["target"].iloc[:-1].isna().sum() == 0
 
     def test_build_features_contains_date_column(self, sample_ohlcv_daily):
         result = build_features(sample_ohlcv_daily, "daily", feature_lags=7)
@@ -148,3 +160,40 @@ class TestTarget:
         result = add_target(df)
         unique_targets = result["target"].dropna().unique()
         assert len(unique_targets) >= 2
+
+
+class TestNoDataLeakage:
+    """Plutôt que de supposer que les décalages (lags, cible) sont corrects, chaque
+    colonne est recalculée manuellement depuis les données brutes et comparée à la
+    colonne produite par le pipeline — un décalage cassé ou inversé ferait échouer
+    ces tests (cf. C12 : absence de fuite via les features/cible décalées).
+    """
+
+    def test_all_lag_columns_match_manual_shift(self, sample_ohlcv_daily):
+        df = sample_ohlcv_daily.copy().set_index("date").sort_index()
+        result = add_lag_features(df, n_lags=5)
+        for col in ["close", "volume_quote", "high", "low"]:
+            for lag in range(1, 6):
+                expected = df[col].shift(lag)
+                pd.testing.assert_series_equal(
+                    result[f"{col}_lag_{lag}"], expected, check_names=False
+                )
+
+    def test_target_reflects_next_period_not_current_or_past(self, sample_ohlcv_daily):
+        # add_target() doit regarder VERS L'AVANT (close[t+1] vs close[t]) : un bug qui
+        # inverserait le shift (close[t] vs close[t-1]) donnerait au modèle accès à une
+        # information qu'il n'aurait pas en production — c'est précisément ce qu'un
+        # data leakage silencieux produirait, sans jamais faire planter l'entraînement.
+        df = sample_ohlcv_daily.copy().set_index("date").sort_index()
+        result = add_target(df)
+
+        seuil = 0.005
+        # Recalcul manuel indépendant, sans passer par pct_change/shift du code testé.
+        close = df["close"].values
+        for i in range(len(close) - 1):
+            variation = (close[i + 1] - close[i]) / close[i]
+            expected_label = 2.0 if variation > seuil else (0.0 if variation < -seuil else 1.0)
+            assert result["target"].iloc[i] == expected_label, f"mismatch à l'index {i}"
+
+        # La toute dernière ligne n'a pas de "période suivante" connue -> NaN attendu.
+        assert pd.isna(result["target"].iloc[-1])

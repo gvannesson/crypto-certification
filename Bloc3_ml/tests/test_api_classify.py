@@ -6,6 +6,32 @@ import numpy as np
 import pandas as pd
 
 
+def _mock_model(predicted_class, proba):
+    """Mock XGBoost minimal mais fidèle sur le point qui piège un MagicMock nu :
+    model.get_booster().feature_names doit être None (pas un MagicMock auto-généré,
+    qui est itérable-vide et ferait silencieusement tomber feature_cols à [] dans
+    _run_classification, donnant un DataFrame à 0 colonne -> row.empty -> [] renvoyé).
+    """
+    mock_model = MagicMock()
+    mock_model.predict.return_value = np.array([predicted_class])
+    mock_model.predict_proba.return_value = np.array([proba])
+    mock_model.get_booster.return_value.feature_names = None
+    return mock_model
+
+
+def _sample_ohlcv(periods, freq):
+    dates = pd.date_range("2025-01-01", periods=periods, freq=freq)
+    return pd.DataFrame({
+        "date": dates,
+        "open": np.random.uniform(40000, 50000, periods),
+        "high": np.random.uniform(50000, 55000, periods),
+        "low": np.random.uniform(38000, 40000, periods),
+        "close": np.random.uniform(40000, 50000, periods),
+        "volume_quote": np.random.uniform(1e6, 1e8, periods),
+        "trading_pair_id": 1,
+    })
+
+
 class TestClassifyEndpoints:
     def test_health_endpoint(self, client):
         response = client.get("/health")
@@ -20,33 +46,18 @@ class TestClassifyEndpoints:
     @patch("src.api.routes.classify.fetch_recent_ohlcv")
     @patch("src.api.routes.classify.load_model")
     def test_classify_daily_success(self, mock_load_model, mock_fetch_ohlcv, client, auth_headers):
-        mock_model = MagicMock()
-        mock_model.predict.return_value = np.array([2])
-        mock_model.predict_proba.return_value = np.array([[0.1, 0.2, 0.7]])
-        mock_load_model.return_value = mock_model
-
-        dates = pd.date_range("2025-01-01", periods=100, freq="D")
-        df = pd.DataFrame({
-            "date": dates,
-            "open": np.random.uniform(40000, 50000, 100),
-            "high": np.random.uniform(50000, 55000, 100),
-            "low": np.random.uniform(38000, 40000, 100),
-            "close": np.random.uniform(40000, 50000, 100),
-            "volume_quote": np.random.uniform(1e6, 1e8, 100),
-            "trading_pair_id": 1,
-        })
-        mock_fetch_ohlcv.return_value = df
+        mock_load_model.return_value = _mock_model(2, [0.1, 0.2, 0.7])
+        mock_fetch_ohlcv.return_value = _sample_ohlcv(100, "D")
 
         response = client.post(
             "/api/v1/classify/classify_daily",
-            json={"trading_pair_symbol": "BTC-USDT", "num_pred": 1},
+            json={"trading_pair_symbol": "BTC-USDT"},
             headers=auth_headers,
         )
 
         assert response.status_code == 200
         body = response.json()
         assert body["trading_pair_symbol"] == "BTC-USDT"
-        assert body["num_pred"] == 1
         assert len(body["predictions"]) >= 1
         pred = body["predictions"][0]
         assert "predicted_class" in pred
@@ -57,51 +68,36 @@ class TestClassifyEndpoints:
     @patch("src.api.routes.classify.fetch_recent_ohlcv")
     @patch("src.api.routes.classify.load_model")
     def test_classify_hourly_success(self, mock_load_model, mock_fetch_ohlcv, client, auth_headers):
-        mock_model = MagicMock()
-        mock_model.predict.return_value = np.array([0])
-        mock_model.predict_proba.return_value = np.array([[0.6, 0.3, 0.1]])
-        mock_load_model.return_value = mock_model
-
-        dates = pd.date_range("2025-01-01", periods=200, freq="h")
-        df = pd.DataFrame({
-            "date": dates,
-            "open": np.random.uniform(40000, 50000, 200),
-            "high": np.random.uniform(50000, 55000, 200),
-            "low": np.random.uniform(38000, 40000, 200),
-            "close": np.random.uniform(40000, 50000, 200),
-            "volume_quote": np.random.uniform(1e6, 1e8, 200),
-            "trading_pair_id": 1,
-        })
-        mock_fetch_ohlcv.return_value = df
+        mock_load_model.return_value = _mock_model(0, [0.6, 0.3, 0.1])
+        mock_fetch_ohlcv.return_value = _sample_ohlcv(200, "h")
 
         response = client.post(
             "/api/v1/classify/classify_hourly",
-            json={"trading_pair_symbol": "BTC-USDT", "num_pred": 3},
+            json={"trading_pair_symbol": "BTC-USDT"},
             headers=auth_headers,
         )
 
         assert response.status_code == 200
         body = response.json()
-        assert body["num_pred"] == 3
+        assert body["trading_pair_symbol"] == "BTC-USDT"
+        assert len(body["predictions"]) >= 1
 
-    def test_classify_daily_invalid_num_pred(self, client, auth_headers):
-        with patch("src.api.routes.classify.load_model"):
-            response = client.post(
-                "/api/v1/classify/classify_daily",
-                json={"trading_pair_symbol": "BTC-USDT", "num_pred": 30},
-                headers=auth_headers,
-            )
-        assert response.status_code == 400
-        assert "num_pred" in response.json()["detail"]
+    @patch("src.api.routes.classify.fetch_recent_ohlcv")
+    @patch("src.api.routes.classify.load_model")
+    def test_classify_ignores_unknown_extra_fields(self, mock_load_model, mock_fetch_ohlcv, client, auth_headers):
+        # ClassifyRequest (src/api/utils/classes.py) ne déclare que trading_pair_symbol :
+        # Pydantic ignore silencieusement les champs inconnus par défaut (pas de
+        # model_config extra="forbid"). Documente ce comportement explicitement plutôt
+        # que de laisser un client croire qu'un paramètre non supporté serait validé.
+        mock_load_model.return_value = _mock_model(1, [0.2, 0.6, 0.2])
+        mock_fetch_ohlcv.return_value = _sample_ohlcv(100, "D")
 
-    def test_classify_hourly_invalid_num_pred(self, client, auth_headers):
-        with patch("src.api.routes.classify.load_model"):
-            response = client.post(
-                "/api/v1/classify/classify_hourly",
-                json={"trading_pair_symbol": "BTC-USDT", "num_pred": 50},
-                headers=auth_headers,
-            )
-        assert response.status_code == 400
+        response = client.post(
+            "/api/v1/classify/classify_daily",
+            json={"trading_pair_symbol": "BTC-USDT", "num_pred": 30},
+            headers=auth_headers,
+        )
+        assert response.status_code == 200
 
     @patch("src.api.routes.classify.load_model")
     def test_classify_model_not_found_returns_error(self, mock_load_model, app, auth_headers):
@@ -112,7 +108,7 @@ class TestClassifyEndpoints:
         error_client = TestClient(app, raise_server_exceptions=False)
         response = error_client.post(
             "/api/v1/classify/classify_daily",
-            json={"trading_pair_symbol": "FAKE-PAIR", "num_pred": 1},
+            json={"trading_pair_symbol": "FAKE-PAIR"},
             headers=auth_headers,
         )
         assert response.status_code == 500
