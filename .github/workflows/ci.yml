@@ -150,3 +150,62 @@ jobs:
 
       - name: Lint Bloc4_app
         run: ruff check Bloc4_app/ --output-format=github --ignore=E501
+
+  # === C13 : packaging — construit et publie l'image ml-api après succès des tests ===
+  # Ne s'exécute que sur push vers main (pas sur les PR), une fois test-bloc3 validé :
+  # dépendance explicite au succès des tests, comme la chaîne Woodpecker de référence.
+  build-ml-api:
+    name: Build & Push — ml-api (ghcr.io)
+    needs: test-bloc3
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ml-api image
+        uses: docker/build-push-action@v6
+        with:
+          context: Bloc3_ml
+          file: Bloc3_ml/api.Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/crypto-ml-api:latest
+            ghcr.io/${{ github.repository_owner }}/crypto-ml-api:${{ github.sha }}
+
+  # === C13 : déploiement — scopé à ce qui existe réellement (pas de serveur cible) ===
+  # Vérifie que l'image publiée est effectivement récupérable (preuve que le packaging
+  # est utilisable en pratique), et documente la commande réelle de redéploiement plutôt
+  # que de simuler un push SSH vers un serveur qui n'existe pas pour ce projet.
+  deploy-ml-api:
+    name: Deploy (verify pull) — ml-api
+    needs: build-ml-api
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify the published image is pullable
+        run: docker pull ghcr.io/${{ github.repository_owner }}/crypto-ml-api:${{ github.sha }}
+
+      - name: Redeploy command (documentation)
+        run: |
+          echo "Image vérifiée disponible sur le registre."
+          echo "Redéploiement sur l'environnement cible :"
+          echo "  docker compose pull ml-api && docker compose up -d ml-api"
