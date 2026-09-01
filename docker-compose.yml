@@ -156,6 +156,26 @@ services:
       - bloc4_logs:/app/logs
     restart: always
 
+  # === Bloc2 — Veille C6 : monitoring token/coût multi-provider (LiteLLM proxy) ===
+  litellm-proxy:
+    image: ghcr.io/berriai/litellm:v1.90.2
+    container_name: litellm-proxy
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://${DB_USERNAME}:${DB_PASSWORD}@db:5432/litellm
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - LITELLM_SALT_KEY=${LITELLM_SALT_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    ports:
+      - "4010:4000"
+    restart: always
+
   # === Monitoring ===
   prometheus:
     image: prom/prometheus:v2.53.0
