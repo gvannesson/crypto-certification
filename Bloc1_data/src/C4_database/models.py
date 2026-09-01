@@ -40,7 +40,6 @@ class TradingPair(Base):
     base_currency = relationship("Currency", foreign_keys=[base_currency_id], back_populates="base_pairs")
     quote_currency = relationship("Currency", foreign_keys=[quote_currency_id], back_populates="quote_pairs")
     csv_files = relationship("CryptocurrencyCSV", foreign_keys="CryptocurrencyCSV.trading_pair_id", back_populates="trading_pair")
-    ohlcv_minute_data = relationship("OHLCVMinute", foreign_keys="OHLCVMinute.trading_pair_id", back_populates="trading_pair")
     ohlcv_hourly_data = relationship("OHLCVHourly", foreign_keys="OHLCVHourly.trading_pair_id", back_populates="trading_pair")
     ohlcv_daily_data = relationship("OHLCVDaily", foreign_keys="OHLCVDaily.trading_pair_id", back_populates="trading_pair")
 
@@ -116,28 +115,6 @@ class CSVHistoricalData(Base):
         return (f"<CSVHistoricalData(csv_file='{self.csv_file.file_url}', "
                 f"date='{self.date}', close='{self.close}')>")
 
-
-class OHLCVMinute(Base):
-    __tablename__ = "ohlcv_minute"
-
-    id = Column(Integer, primary_key=True)
-    trading_pair_id = Column(Integer, ForeignKey("trading_pairs.id"), nullable=False)
-    date = Column(DateTime, nullable=False)
-    open = Column(Float, nullable=False)
-    high = Column(Float, nullable=False)
-    low = Column(Float, nullable=False)
-    close = Column(Float, nullable=False)
-    volume_quote = Column(Float, nullable=False)
-
-    trading_pair = relationship("TradingPair", foreign_keys=[trading_pair_id], back_populates="ohlcv_minute_data")
-
-    __table_args__ = (
-        UniqueConstraint("trading_pair_id", "date", name="uniq_ohlcv_minute_trading_pair_date"),
-    )
-
-    def __repr__(self):
-        return (f"<OHLCVMinute(pair_id={self.trading_pair_id}, "
-                f"date='{self.date}', close={self.close})>")
 
 
 class OHLCVHourly(Base):

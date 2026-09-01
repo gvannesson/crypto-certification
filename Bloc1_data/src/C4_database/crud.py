@@ -10,7 +10,6 @@ from src.C4_database.models import (
     Exchange,
     CryptocurrencyCSV,
     CSVHistoricalData,
-    OHLCVMinute,
     OHLCVHourly,
     OHLCVDaily,
     User,
@@ -126,19 +125,6 @@ class CryptocurrencyCSVCRUD(BaseCRUD):
 class CSVHistoricalDataCRUD(BaseCRUD):
     def __init__(self, db: Session):
         super().__init__(CSVHistoricalData, db)
-
-
-class OHLCVMinuteCRUD(BaseCRUD):
-    def __init__(self, db: Session):
-        super().__init__(OHLCVMinute, db)
-
-    def get_ohlcv_by_trading_pair(self, trading_pair_id: int, start_date: Optional[str] = None):
-        query = self.db.query(self.model).filter(self.model.trading_pair_id == trading_pair_id)
-        if start_date:
-            validated_date = validate_date(start_date)
-            if validated_date:
-                query = query.filter(self.model.date >= validated_date)
-        return query.order_by(self.model.date.asc()).all()
 
 
 class OHLCVHourlyCRUD(BaseCRUD):

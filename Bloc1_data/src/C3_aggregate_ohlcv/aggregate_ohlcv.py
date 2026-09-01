@@ -26,10 +26,8 @@ def aggregate_all_ohlcv():
                 db_model = db.ohlcv_daily
             elif timeframe == "hour":
                 db_model = db.ohlcv_hourly
-            elif timeframe.endswith("minute"):
-                db_model = db.ohlcv_minute
             else:
-                logger.warning(f"Timeframe inconnu : {timeframe}")
+                logger.warning(f"Timeframe inconnu ou non supporté : {timeframe}")
                 continue
 
             save_ohlcv_data_to_db(aggregated_df, trading_pair, timeframe, db_model)

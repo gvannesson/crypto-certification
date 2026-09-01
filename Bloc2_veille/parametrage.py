@@ -22,7 +22,8 @@ def build_dataframe(data):
     df.columns = ["score", "sentiment", "timestamp"]
     df["score"] = df["score"].astype(int)
     df["date"] = pd.to_datetime(df["timestamp"].astype(int), unit="s").dt.strftime("%Y-%m-%d")
-    return df[["date", "score", "sentiment"]].reset_index(drop=True)
+    df = df[["date", "score", "sentiment"]]
+    return df.sort_values("date", ascending=False).reset_index(drop=True)
 
 
 def interpret_signal(score):

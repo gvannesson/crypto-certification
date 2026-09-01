@@ -9,7 +9,6 @@ from src.C4_database.crud import (
     ExchangeCRUD,
     CryptocurrencyCSVCRUD,
     CSVHistoricalDataCRUD,
-    OHLCVMinuteCRUD,
     OHLCVHourlyCRUD,
     OHLCVDailyCRUD,
     UserCRUD,
@@ -55,7 +54,6 @@ class Database:
         self.exchanges = ExchangeCRUD(self.session)
         self.crypto_csvs = CryptocurrencyCSVCRUD(self.session)
         self.historical_data = CSVHistoricalDataCRUD(self.session)
-        self.ohlcv_minute = OHLCVMinuteCRUD(self.session)
         self.ohlcv_hourly = OHLCVHourlyCRUD(self.session)
         self.ohlcv_daily = OHLCVDailyCRUD(self.session)
         self.users = UserCRUD(self.session)

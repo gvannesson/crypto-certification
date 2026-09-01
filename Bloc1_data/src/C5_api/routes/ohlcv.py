@@ -21,17 +21,6 @@ def _validate_start_date(start_date: str | None) -> str | None:
         )
 
 
-@router.get("/minute_by_trading_pair_id")
-def get_ohlcv_minute(
-    trading_pair_id: int,
-    start_date: str = Query(None, description="Date de début au format YYYY-MM-DD"),
-    db=Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    validated = _validate_start_date(start_date)
-    return db.ohlcv_minute.get_ohlcv_by_trading_pair(trading_pair_id, validated)
-
-
 @router.get("/hourly_by_trading_pair_id")
 def get_ohlcv_hourly(
     trading_pair_id: int,

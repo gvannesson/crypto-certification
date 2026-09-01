@@ -79,16 +79,6 @@ class TestOHLCV:
         )
         assert response.status_code == 200
 
-    def test_get_ohlcv_minute(self, client, auth_headers, mock_db):
-        mock_db.ohlcv_minute.get_ohlcv_by_trading_pair.return_value = []
-
-        response = client.get(
-            "/api/v1/ohlcv/minute_by_trading_pair_id",
-            params={"trading_pair_id": 1},
-            headers=auth_headers,
-        )
-        assert response.status_code == 200
-
     def test_get_ohlcv_daily_with_start_date(self, client, auth_headers, mock_db):
         mock_db.ohlcv_daily.get_ohlcv_by_trading_pair.return_value = []
 

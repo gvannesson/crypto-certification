@@ -52,7 +52,6 @@ docker compose up db data-api data-scripts -d
 | `currencies` | Cryptomonnaies et fiats (BTC, ETH, USDT, USD) |
 | `trading_pairs` | Paires de trading (BTCUSDT, ETHUSDT, etc.) |
 | `exchanges` | Places de marché (Binance) |
-| `ohlcv_minute` | Données OHLCV à la minute |
 | `ohlcv_hourly` | Données OHLCV horaires |
 | `ohlcv_daily` | Données OHLCV journalières |
 | `predictions_hourly` | Prédictions horaires du modèle ML |
@@ -74,7 +73,7 @@ Les requêtes utilisent SQLAlchemy ORM avec les optimisations suivantes :
 ### Algorithme d'agrégation (C3)
 
 L'agrégation des données OHLCV suit ce processus :
-1. Extraction des données minute depuis l'API Binance
+1. Extraction des données horaires depuis l'API Binance
 2. Regroupement par fenêtre temporelle (1h ou 1j)
 3. Calcul : `open` = premier, `high` = max, `low` = min, `close` = dernier, `volume` = somme
 4. Insertion en base avec gestion des doublons (contrainte unique)
@@ -102,7 +101,6 @@ L'agrégation des données OHLCV suit ce processus :
 |---------|----------|-------------|------|
 | GET | `/api/v1/ohlcv/daily_by_trading_pair_id` | Données OHLCV journalières | JWT |
 | GET | `/api/v1/ohlcv/hourly_by_trading_pair_id` | Données OHLCV horaires | JWT |
-| GET | `/api/v1/ohlcv/minute_by_trading_pair_id` | Données OHLCV à la minute | JWT |
 | GET | `/api/v1/trading_pairs/all` | Liste des paires par symbole | JWT |
 | GET | `/api/v1/trading_pairs/trading_pair_by_currency_symbols` | Paire par symboles base/quote | JWT |
 
@@ -162,7 +160,7 @@ uv run scrapy crawl cointelegraph
 
 | Source | Méthode | Données |
 |--------|---------|---------|
-| Binance | API REST | OHLCV (minute, horaire, journalier) |
+| Binance | API REST | OHLCV (horaire, journalier) |
 | CoinMarketCap | API REST | Currencies, paires de trading |
 | CryptoDownload | Fichiers CSV | Données historiques |
 | CoinTelegraph | **Scraping (Scrapy)** | Actualités BTC |
