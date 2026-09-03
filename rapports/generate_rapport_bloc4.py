@@ -319,7 +319,7 @@ def build_document():
     )
     doc.add_heading("4.1 Outils de pilotage réels", level=2)
     add_bullet(doc, "Backlog", "GitHub Issues du dépôt crypto-certification (8 issues ouvertes à date), qui tracent des limites identifiées pendant les rapports E2/E3, mais pas un backlog dédié à la construction de Bloc4_app, suivie directement par commit.")
-    add_bullet(doc, "Branches", "deux branches de travail réelles (bloc1_data, bloc2-bloc3-mise-en-service), divergentes depuis le commit initial du dépôt, non encore fusionnées dans main à ce stade : une limite reprise dans le bilan plutôt que dissimulée.")
+    add_bullet(doc, "Branches", "une branche de travail par changement, fusionnée dans main une fois validée (ex. CI_webapp, qui a ajouté le job de build de l'image webapp au §7), plutôt qu'un développement direct sur main.")
     add_bullet(doc, "Board Kanban", "envisagé (Backlog → In Progress → Review → Done) mais jamais activé dans les faits : le suivi réel s'est fait par les commits et les issues, pas par un board GitHub Projects.")
     doc.add_heading("4.2 Rythme de travail réel", level=2)
     doc.add_paragraph(
@@ -492,9 +492,9 @@ def build_document():
     add_bullet(doc, "test-bloc4", "installation via uv sync --dev, exécution de pytest tests/ -v --cov, avec les variables SQLite en mémoire et des URLs d'API simulées (les tests mockent les appels HTTP réels) ; upload du rapport de couverture en artefact.")
     add_bullet(doc, "lint", "ruff check Bloc4_app/ --ignore=E501, dans un job commun aux trois blocs.")
     doc.add_paragraph(
-        "Contrairement à test-bloc3, le job test-bloc4 n'est suivi d'aucune étape de build ou "
-        "de déploiement d'image dans la chaîne actuelle (cf. §7) : une asymétrie assumée, "
-        "reprise dans le bilan."
+        "Comme pour test-bloc3, le job test-bloc4 est désormais suivi d'une étape de build et "
+        "de déploiement d'image sur push vers main (cf. §7) : la chaîne webapp est alignée sur "
+        "celle de ml-api."
     )
 
     doc.add_page_break()
@@ -513,13 +513,15 @@ def build_document():
     doc.add_heading("7.2 Déploiement : périmètre assumé", level=2)
     doc.add_paragraph(
         "Le service webapp est déclaré dans docker-compose.yml (build depuis app.Dockerfile, "
-        "port 8090→8080, dépend de db/data-api/ml-api). Contrairement à ml-api (cf. rapport E3, "
-        "jobs build-ml-api/deploy-ml-api qui publient une image sur ghcr.io après succès des "
-        "tests), la chaîne CI actuelle ne construit ni ne publie d'image webapp vers un "
-        "registre : le déploiement de Bloc4_app se fait uniquement par docker compose up "
-        "--build en local, sans vérification automatisée de la construction de l'image en CI. "
-        "C'est un écart réel avec la pratique déjà appliquée côté ml-api, repris dans le bilan "
-        "comme axe d'harmonisation plutôt que présenté comme équivalent."
+        "port 8090→8080, dépend de db/data-api/ml-api). Comme pour ml-api (cf. rapport E3), la "
+        "chaîne CI construit et publie désormais l'image sur ghcr.io après succès des tests "
+        "(build-webapp, needs: test-bloc4) puis vérifie qu'elle est bien récupérable "
+        "(deploy-webapp, needs: build-webapp), sur le même schéma que build-ml-api/"
+        "deploy-ml-api. Comme pour ml-api, ce déploiement reste scopé à ce qui est vérifiable "
+        "sans serveur de production dédié : deploy-webapp confirme que l'image est utilisable "
+        "(docker pull) et documente la commande réelle de redéploiement (docker compose pull "
+        "webapp && docker compose up -d webapp) plutôt que de simuler un déploiement vers un "
+        "serveur qui n'existe pas pour ce projet."
     )
     doc.add_heading("7.3 Configuration versionnée", level=2)
     doc.add_paragraph(
@@ -561,8 +563,8 @@ def build_document():
         "structure sémantique HTML5 réelle, mais pas d'attributs alt/aria-label ni de lien "
         "d'évitement : deux limites concrètes identifiées, pas d'audit WCAG formel mené.")
     add_bullet(doc, "Conduite de projet",
-        "pas de board Kanban actif malgré l'intention initiale ; deux branches de travail non "
-        "encore fusionnées dans main, à traiter avant une diffusion plus large.")
+        "pas de board Kanban actif malgré l'intention initiale : le suivi reste porté par les "
+        "commits et les issues, pas par un outil de pilotage visuel dédié.")
     add_bullet(doc, "Robustesse asymétrique",
         "DashboardService a désormais un timeout (corrigé pendant ce rapport) mais ne capture "
         "toujours pas les erreurs réseau, contrairement à ForecastService : une panne de "
@@ -574,9 +576,6 @@ def build_document():
         "pas de scan automatisé de vulnérabilités des dépendances (pip-audit ou équivalent) ; "
         "DEBUG vaut True par défaut si la variable d'environnement n'est pas positionnée "
         "explicitement (seul docker-compose la force à False aujourd'hui).")
-    add_bullet(doc, "Livraison continue",
-        "contrairement à ml-api, aucune image webapp n'est construite ni publiée depuis la CI : "
-        "le déploiement reste manuel (docker compose up --build).")
 
     doc.add_page_break()
 
@@ -633,7 +632,7 @@ def build_document():
             ["Revue OWASP", "Rapport, §5.5"],
             ["Tests", "Bloc4_app/tests/*.py"],
             ["Intégration continue", ".github/workflows/ci.yml (job test-bloc4)"],
-            ["Livraison continue", "Bloc4_app/app.Dockerfile, entrypoint.sh, docker-compose.yml (service webapp)"],
+            ["Livraison continue", "Bloc4_app/app.Dockerfile, entrypoint.sh, docker-compose.yml (service webapp), .github/workflows/ci.yml (build-webapp, deploy-webapp)"],
         ],
         col_widths=[6, 11],
     )
