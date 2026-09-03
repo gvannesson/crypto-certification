@@ -57,6 +57,32 @@ class TestTradingPairs:
         assert "not found" in response.json()["detail"]
 
 
+class TestReferenceData:
+    def test_get_all_currencies(self, client, auth_headers, mock_db):
+        mock_currency = MagicMock()
+        mock_currency.id = 1
+        mock_currency.symbol = "BTC"
+        mock_db.currencies.list_all.return_value = [mock_currency]
+
+        response = client.get("/api/v1/currencies/all", headers=auth_headers)
+        assert response.status_code == 200
+        mock_db.currencies.list_all.assert_called_once_with()
+
+    def test_get_all_exchanges(self, client, auth_headers, mock_db):
+        mock_exchange = MagicMock()
+        mock_exchange.id = 1
+        mock_exchange.name = "Binance"
+        mock_db.exchanges.list_all.return_value = [mock_exchange]
+
+        response = client.get("/api/v1/exchanges/all", headers=auth_headers)
+        assert response.status_code == 200
+        mock_db.exchanges.list_all.assert_called_once_with()
+
+    def test_get_all_currencies_requires_auth(self, client):
+        response = client.get("/api/v1/currencies/all")
+        assert response.status_code == 401
+
+
 class TestOHLCV:
     def test_get_ohlcv_daily(self, client, auth_headers, mock_db):
         mock_db.ohlcv_daily.get_ohlcv_by_trading_pair.return_value = []

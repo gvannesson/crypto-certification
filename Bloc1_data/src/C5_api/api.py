@@ -9,7 +9,7 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.append(str(ROOT_DIR))
 
 from src.settings import logger
-from src.C5_api.routes import login, ohlcv, trading_pairs, predictions
+from src.C5_api.routes import login, ohlcv, trading_pairs, predictions, currencies, exchanges
 
 app = FastAPI(
     title="Bloc1 Data API - Classification de Tendance Crypto",
@@ -21,6 +21,8 @@ app.include_router(login.router, prefix="/api/v1")
 app.include_router(trading_pairs.router, prefix="/api/v1")
 app.include_router(ohlcv.router, prefix="/api/v1")
 app.include_router(predictions.router, prefix="/api/v1")
+app.include_router(currencies.router, prefix="/api/v1")
+app.include_router(exchanges.router, prefix="/api/v1")
 
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 

@@ -89,13 +89,17 @@
 
 ### 3.3 Droit de suppression (Article 17 RGPD)
 
-**Procédure :**
+**Procédure — Application Django (T2) :**
 1. L'utilisateur demande la suppression de son compte
 2. L'administrateur supprime l'entrée dans `auth_user` (Django)
 3. Les sessions associées sont invalidées
 4. Confirmation envoyée à l'utilisateur
 
 **Délai :** 30 jours maximum après la demande
+
+**Procédure — Compte API Bloc1 (T1) :** suppression en libre-service, sans intervention d'un administrateur. L'utilisateur authentifié appelle `DELETE /api/v1/authentification/account` ; le compte est supprimé immédiatement en base.
+
+**Délai :** immédiat (temps de traitement de la requête HTTP)
 
 ### 3.4 Droit à la portabilité (Article 20 RGPD)
 

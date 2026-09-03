@@ -74,6 +74,8 @@ def mock_db(mock_user, mock_script_user):
     }.get(u)
     db.trading_pairs.get_pairs_by_base_currency_symbol.return_value = []
     db.trading_pairs.get_pair_by_currency_symbols.return_value = None
+    db.currencies.list_all.return_value = []
+    db.exchanges.list_all.return_value = []
     db.ohlcv_daily.get_ohlcv_by_trading_pair.return_value = []
     db.ohlcv_hourly.get_ohlcv_by_trading_pair.return_value = []
     db.prediction_hourly.get_predictions_by_trading_pair.return_value = []
