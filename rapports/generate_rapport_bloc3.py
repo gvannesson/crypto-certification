@@ -218,11 +218,11 @@ def build_document():
 
     doc.add_heading("2.4 Tests de l'API", level=2)
     doc.add_paragraph(
-        "12 tests (pytest + TestClient FastAPI) couvrent les 3 routes authentifiées/sensibles "
+        "13 tests (pytest + TestClient FastAPI) couvrent les 3 routes authentifiées/sensibles "
         "(login, classify_daily, classify_hourly) et les 2 routes de supervision (health, root) :"
     )
     add_bullet(doc, "test_api_auth.py (5 tests)", "login réussi/mot de passe incorrect/mot de passe vide, accès à classify sans token / avec token invalide (401 dans les deux cas).")
-    add_bullet(doc, "test_api_classify.py (7 tests)", "health, root, classify_daily/hourly en succès nominal, gestion des champs inconnus ignorés silencieusement par Pydantic, modèle introuvable (500), corps de requête manquant (422).")
+    add_bullet(doc, "test_api_classify.py (8 tests)", "health, root, classify_daily/hourly en succès nominal, gestion des champs inconnus ignorés silencieusement par Pydantic, corps de requête manquant (422), et deux cas de paire/modèle introuvable (404 chacun : modèle non entraîné, puis paire inconnue de l'API Bloc1) — anciennement une 500 non interceptée, corrigée suite à un incident réel (cf. rapport E5).")
     doc.add_paragraph(
         "Point méthodologique rencontré en écrivant ces tests : un mock de modèle XGBoost "
         "(unittest.mock.MagicMock) non configuré sur model.get_booster().feature_names se "
@@ -233,7 +233,7 @@ def build_document():
         "comportement d'un modèle non entraîné plutôt que le comportement accidentel d'un mock nu."
     )
     doc.add_paragraph(
-        "Suite exécutée : 12 tests réussis (sur les 38 tests au total du dépôt Bloc3_ml, détaillés "
+        "Suite exécutée : 13 tests réussis (sur les 39 tests au total du dépôt Bloc3_ml, détaillés "
         "au §5). Sources versionnées et accessibles depuis le dépôt Git distant (GitHub)."
     )
 
@@ -270,14 +270,14 @@ def build_document():
 
     doc.add_heading("3.3 Tests d'intégration", level=2)
     doc.add_paragraph(
-        "54 tests couvrent l'application Bloc4_app dans son ensemble (comptes utilisateurs, "
+        "56 tests couvrent l'application Bloc4_app dans son ensemble (comptes utilisateurs, "
         "dashboard, monitorage, intégration ml-api) :"
     )
     add_styled_table(doc,
         ["Fichier", "Tests", "Périmètre"],
         [
             ["tests/test_accounts.py", "14", "Login, inscription, déconnexion, contrôle d'accès (redirection si non authentifié)"],
-            ["tests/test_services.py", "13", "DashboardService (Bloc1) et ForecastService (Bloc3) — dont les 2 nouveaux tests couvrant le retry sur 401 et la gestion d'erreur réseau"],
+            ["tests/test_services.py", "15", "DashboardService (Bloc1) et ForecastService (Bloc3) — dont 2 tests sur le retry ForecastService (401, erreur réseau) et 2 tests ajoutés depuis sur le timeout de DashboardService (cf. rapport E4)"],
             ["tests/test_forecast.py", "6", "Vue de classification à la demande : succès, erreur API, erreur de connexion, formulaire invalide, contrôle d'accès"],
             ["tests/test_dashboard.py", "11", "Dashboard, page de monitorage (cf. §4), graphiques, API interne de données de graphique"],
             ["tests/test_metrics.py", "10", "Calcul de dérive du modèle (fonctions pures, cf. §4) — nouveau module"],
@@ -285,7 +285,7 @@ def build_document():
         col_widths=[6, 2.5, 8.5],
     )
     doc.add_paragraph(
-        "Suite exécutée : 54 tests réussis, couverture 96 % (mesurée par pytest-cov, module "
+        "Suite exécutée : 56 tests réussis, couverture 97 % (mesurée par pytest-cov, module "
         "dashboard/metrics.py à 100 %). Sources versionnées et accessibles depuis le dépôt Git "
         "distant de l'application."
     )
@@ -412,8 +412,8 @@ def build_document():
     # ══════════════════════════════════════════════════════════════════
     doc.add_heading("5. Tester le modèle automatiquement (C12)", level=1)
     doc.add_paragraph(
-        "92 tests automatisés au total couvrent le modèle et son intégration : 38 dans "
-        "Bloc3_ml (pipeline de features, métriques, API) et 54 dans Bloc4_app (application, "
+        "95 tests automatisés au total couvrent le modèle et son intégration : 39 dans "
+        "Bloc3_ml (pipeline de features, métriques, API) et 56 dans Bloc4_app (application, "
         "dont le nouveau monitorage de dérive)."
     )
 
@@ -422,7 +422,7 @@ def build_document():
         ["Fichier", "Tests", "Périmètre"],
         [
             ["tests/test_api_auth.py", "5", "Authentification JWT (cf. §2.4)"],
-            ["tests/test_api_classify.py", "7", "Endpoints de classification (cf. §2.4)"],
+            ["tests/test_api_classify.py", "8", "Endpoints de classification (cf. §2.4)"],
             ["tests/test_build_features.py", "19", "Construction des features : lags, rendements, indicateurs techniques, features temporelles, cible ; dont 2 tests dédiés à l'absence de fuite de données (§5.2)"],
             ["tests/test_evaluate_model.py", "7", "Fonction compute_metrics() : predictions parfaites/toutes fausses, présence des clés, plage de valeurs, direction accuracy avec/sans cas STABLE-STABLE, liste vide"],
         ],
@@ -440,8 +440,8 @@ def build_document():
 
     doc.add_heading("5.3 Couverture de code (Bloc3_ml)", level=2)
     doc.add_paragraph(
-        "Mesurée avec pytest-cov, sur l'ensemble du dépôt Bloc3_ml (453 lignes instrumentées, "
-        "52 % de couverture globale) :"
+        "Mesurée avec pytest-cov, sur l'ensemble du dépôt Bloc3_ml (454 lignes instrumentées, "
+        "54 % de couverture globale) :"
     )
     add_styled_table(doc,
         ["Module", "Couverture", "Commentaire"],
@@ -452,7 +452,7 @@ def build_document():
             ["src/api/api.py", "91 %", "App FastAPI (bloc __main__ non couvert, normal)"],
             ["src/model/evaluate_model.py", "51 %", "compute_metrics() couvert ; evaluate_classifier() (boucle d'entraînement/évaluation complète) non couvert par des tests unitaires — nécessiterait un jeu de données synthétique multi-périodes, hors périmètre de cette itération"],
             ["src/model/train_model.py", "30 %", "Partiellement couvert indirectement via les tests d'API (mocks)"],
-            ["src/api/utils/functions.py", "35 %", "load_model/fetch_recent_ohlcv couverts via les mocks des tests API ; build_features_for_prediction non exercé directement"],
+            ["src/api/utils/functions.py", "63 %", "load_model/fetch_recent_ohlcv couverts via les mocks des tests API, y compris les deux chemins 404 ajoutés (cf. §2.4) ; build_features_for_prediction non exercé directement"],
             ["src/data/*, src/model/initiate_classifier.py, predict_model.py, save_model.py, src/monitoring/monitor_training.py, src/utils/classes.py", "0 %", "Code d'orchestration du pipeline d'entraînement (appels réseau vers Bloc1, écriture de modèles sur disque) — non couvert, choix de périmètre assumé pour cette itération (cf. bilan)"],
         ],
         col_widths=[6.5, 2.5, 8],
@@ -497,7 +497,7 @@ def build_document():
     add_styled_table(doc,
         ["Job", "Déclencheur", "Rôle"],
         [
-            ["test-bloc3", "push / pull_request sur main, develop", "Exécute les 38 tests Bloc3_ml avec couverture (préexistant)"],
+            ["test-bloc3", "push / pull_request sur main, develop", "Exécute les 39 tests Bloc3_ml avec couverture (préexistant)"],
             ["build-ml-api", "push sur main, après succès de test-bloc3", "Construit l'image Docker ml-api (api.Dockerfile) et la publie sur ghcr.io, taguée latest et par SHA de commit"],
             ["deploy-ml-api", "push sur main, après succès de build-ml-api", "Vérifie que l'image publiée est réellement récupérable (docker pull), documente la commande de redéploiement"],
         ],
@@ -603,7 +603,7 @@ def build_document():
         "Ce rapport documente la mise en service complète du modèle retenu en E2 : une API REST "
         "authentifiée et documentée (C9), intégrée dans une application Django existante avec ses "
         "propres garde-fous réseau (C10), surveillée à deux niveaux — santé applicative et dérive "
-        "du modèle lui-même (C11) —, sécurisée par 92 tests automatisés couvrant explicitement "
+        "du modèle lui-même (C11) —, sécurisée par 95 tests automatisés couvrant explicitement "
         "l'absence de fuite de données (C12), et livrée par une chaîne d'intégration et de "
         "livraison continue allant du test au packaging (C13)."
     )
