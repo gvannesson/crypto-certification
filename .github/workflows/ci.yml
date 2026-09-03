@@ -209,3 +209,59 @@ jobs:
           echo "Image vérifiée disponible sur le registre."
           echo "Redéploiement sur l'environnement cible :"
           echo "  docker compose pull ml-api && docker compose up -d ml-api"
+
+  # === C19 : packaging — construit et publie l'image webapp après succès des tests ===
+  # Même schéma que build-ml-api/deploy-ml-api : referme l'écart documenté au rapport E4
+  # (§7.2, "aucune image webapp n'est construite ni publiée depuis la CI").
+  build-webapp:
+    name: Build & Push — webapp (ghcr.io)
+    needs: test-bloc4
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push webapp image
+        uses: docker/build-push-action@v6
+        with:
+          context: Bloc4_app
+          file: Bloc4_app/app.Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/crypto-webapp:latest
+            ghcr.io/${{ github.repository_owner }}/crypto-webapp:${{ github.sha }}
+
+  # === C19 : déploiement — scopé à ce qui existe réellement (pas de serveur cible) ===
+  deploy-webapp:
+    name: Deploy (verify pull) — webapp
+    needs: build-webapp
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify the published image is pullable
+        run: docker pull ghcr.io/${{ github.repository_owner }}/crypto-webapp:${{ github.sha }}
+
+      - name: Redeploy command (documentation)
+        run: |
+          echo "Image vérifiée disponible sur le registre."
+          echo "Redéploiement sur l'environnement cible :"
+          echo "  docker compose pull webapp && docker compose up -d webapp"
