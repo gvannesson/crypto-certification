@@ -174,11 +174,38 @@ def build_llm_prompt(df_sentiment: pd.DataFrame, df_prices: pd.DataFrame) -> str
 
 {table}
 
-En te basant uniquement sur ces données, prédis la tendance du Bitcoin pour les prochaines 24h.
-Réponds STRICTEMENT au format suivant :
-PREDICTION: [HAUSSE ou BAISSE ou STABLE]
-CONFIANCE: [pourcentage entre 0 et 100]
-RAISON: [une phrase courte expliquant ton raisonnement]"""
+En te basant uniquement sur ces données, prédis la tendance du Bitcoin pour les prochaines 24h
+en appelant l'outil submit_prediction."""
+
+
+PREDICTION_TOOL = {
+    "name": "submit_prediction",
+    "description": (
+        "Soumet la prédiction de tendance du Bitcoin pour les prochaines 24h, avec un "
+        "niveau de confiance et une justification."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "prediction": {
+                "type": "string",
+                "enum": ["HAUSSE", "BAISSE", "STABLE"],
+                "description": "Tendance prédite pour les prochaines 24h.",
+            },
+            "confidence": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100,
+                "description": "Niveau de confiance en pourcentage.",
+            },
+            "reason": {
+                "type": "string",
+                "description": "Justification courte du raisonnement.",
+            },
+        },
+        "required": ["prediction", "confidence", "reason"],
+    },
+}
 
 
 def call_anthropic(prompt: str, api_key: str, temperature: float = 0.0) -> dict:
@@ -186,6 +213,10 @@ def call_anthropic(prompt: str, api_key: str, temperature: float = 0.0) -> dict:
 
     Route via le proxy LiteLLM (passthrough Anthropic, spend tracking par clé virtuelle)
     quand il est configuré ; sinon appel direct à l'API Anthropic avec la clé fournie.
+
+    Utilise le tool use natif d'Anthropic (sortie structurée, schéma JSON forcé) plutôt
+    qu'un parsing de texte libre : élimine l'ambiguïté et le risque de repli silencieux
+    sur une valeur par défaut en cas de réponse mal formatée.
     """
     if LITELLM_PROXY_URL and LITELLM_VIRTUAL_KEY:
         client = anthropic.Anthropic(
@@ -198,17 +229,22 @@ def call_anthropic(prompt: str, api_key: str, temperature: float = 0.0) -> dict:
     start = time.time()
     response = client.messages.create(
         model=ANTHROPIC_MODEL,
-        max_tokens=256,
+        max_tokens=500,
         temperature=temperature,
+        tools=[PREDICTION_TOOL],
+        tool_choice={"type": "tool", "name": "submit_prediction"},
         messages=[{"role": "user", "content": prompt}],
     )
     latency = time.time() - start
 
-    text = response.content[0].text
-    prediction, confidence, reason = _parse_llm_response(text)
+    tool_use = next(block for block in response.content if block.type == "tool_use")
+    args = tool_use.input
+    prediction = args["prediction"]
+    confidence = f"{args['confidence']}%"
+    reason = args["reason"]
 
     return {
-        "raw_response": text,
+        "raw_response": json.dumps(args, ensure_ascii=False, indent=2),
         "prediction": prediction,
         "confidence": confidence,
         "reason": reason,
@@ -241,30 +277,6 @@ def refresh_scraped_articles() -> tuple[bool, str]:
         return True, ""
     error = result.stderr.strip() or result.stdout.strip() or "Erreur inconnue"
     return False, error
-
-
-def _parse_llm_response(text: str) -> tuple[str, str, str]:
-    """Parse la réponse du LLM pour extraire prédiction, confiance, raison."""
-    prediction = "N/A"
-    confidence = "N/A"
-    reason = "N/A"
-
-    for line in text.strip().split("\n"):
-        upper = line.upper()
-        if "PREDICTION" in upper:
-            if "HAUSSE" in upper:
-                prediction = "HAUSSE"
-            elif "BAISSE" in upper:
-                prediction = "BAISSE"
-            else:
-                prediction = "STABLE"
-        elif "CONFIANCE" in upper:
-            nums = "".join(c for c in line if c.isdigit())
-            confidence = f"{nums}%" if nums else "N/A"
-        elif "RAISON" in upper:
-            reason = line.split(":", 1)[-1].strip() if ":" in line else line
-
-    return prediction, confidence, reason
 
 
 def render_veille_tab():
@@ -424,7 +436,7 @@ def _render_poc_tab():
             st.markdown(f"**Modèle :** `{result['model']}`")
             st.markdown(f"**Température :** `{result['temperature']}` (déterministe)")
             st.markdown(f"**Top-p :** non utilisé (redondant avec temperature=0)")
-            st.markdown(f"**Max tokens :** `256`")
+            st.markdown(f"**Max tokens :** `500`")
             st.markdown(f"**Tokens utilisés :** {result['input_tokens']} input + {result['output_tokens']} output")
             st.markdown(f"**Latence :** {result['latency_s']}s")
             if LITELLM_PROXY_URL and LITELLM_VIRTUAL_KEY:
