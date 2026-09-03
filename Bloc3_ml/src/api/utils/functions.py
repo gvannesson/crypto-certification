@@ -5,6 +5,7 @@ import joblib
 
 import requests
 import pandas as pd
+from fastapi import HTTPException
 
 from src.settings import DataSettings, SecretSettings, logger
 from src.features.build_features import build_features
@@ -14,7 +15,7 @@ def load_model(symbol: str, granularity_folder: str):
     """Charge un modèle pickle depuis le dossier de modèles."""
     model_path = os.path.join(DataSettings.models_dir_path, granularity_folder, f"{symbol}.pkl")
     if not os.path.exists(model_path):
-        raise FileNotFoundError(f"Modèle {symbol} introuvable : {model_path}")
+        raise HTTPException(status_code=404, detail=f"Aucun modèle entraîné pour '{symbol}'.")
     return joblib.load(model_path)
 
 
@@ -30,7 +31,7 @@ def fetch_recent_ohlcv(symbol: str, granularity: str):
         headers={"Authorization": f"Bearer {token}"},
     )
     if tp_response.status_code != 200:
-        raise Exception(f"Trading pair introuvable : {symbol}")
+        raise HTTPException(status_code=404, detail=f"Paire de trading introuvable : '{symbol}'.")
 
     tp_id = tp_response.json()["id"]
     ohlcv_url = DataSettings.E1_ohlcv_urls[granularity]

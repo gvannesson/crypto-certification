@@ -99,19 +99,38 @@ class TestClassifyEndpoints:
         )
         assert response.status_code == 200
 
-    @patch("src.api.routes.classify.load_model")
-    def test_classify_model_not_found_returns_error(self, mock_load_model, app, auth_headers):
-        from fastapi.testclient import TestClient
-
-        mock_load_model.side_effect = FileNotFoundError("Modèle introuvable")
-
-        error_client = TestClient(app, raise_server_exceptions=False)
-        response = error_client.post(
+    def test_classify_model_not_found_returns_404(self, client, auth_headers):
+        # Incident réel (C21) : une paire sans modèle entraîné (ex. symbole inconnu ou
+        # mal orthographié) faisait remonter une FileNotFoundError non interceptée
+        # jusqu'à FastAPI -> 500 Internal Server Error, visible dans Prometheus comme
+        # une erreur serveur alors qu'il s'agit d'une entrée utilisateur invalide.
+        # load_model() lève désormais HTTPException(404) directement.
+        response = client.post(
             "/api/v1/classify/classify_daily",
-            json={"trading_pair_symbol": "FAKE-PAIR"},
+            json={"trading_pair_symbol": "FAKE-COIN"},
             headers=auth_headers,
         )
-        assert response.status_code == 500
+        assert response.status_code == 404
+        assert "FAKE-COIN" in response.json()["detail"]
+
+    @patch("src.api.utils.functions.requests.get")
+    @patch("src.api.utils.functions._get_e1_token")
+    @patch("src.api.routes.classify.load_model")
+    def test_classify_trading_pair_not_found_on_bloc1_returns_404(
+        self, mock_load_model, mock_token, mock_get, client, auth_headers
+    ):
+        # Même incident, second point d'entrée : le modèle existe mais la paire n'est
+        # pas connue de l'API Bloc1 (fetch_recent_ohlcv). Même correctif appliqué.
+        mock_load_model.return_value = _mock_model(1, [0.2, 0.6, 0.2])
+        mock_token.return_value = "fake-token"
+        mock_get.return_value = MagicMock(status_code=404)
+
+        response = client.post(
+            "/api/v1/classify/classify_daily",
+            json={"trading_pair_symbol": "FAKE-COIN"},
+            headers=auth_headers,
+        )
+        assert response.status_code == 404
 
     def test_classify_missing_body(self, client, auth_headers):
         response = client.post(
