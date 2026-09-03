@@ -202,7 +202,8 @@ def build_document():
 
     doc.add_heading("Résolution", level=2)
     doc.add_paragraph(
-        "Les deux points remontent désormais une HTTPException(404) explicite avec un message "
+        "Tracé sur l'outil de suivi du dépôt (Issue GitHub #10). Les deux points remontent "
+        "désormais une HTTPException(404) explicite avec un message "
         "clair (« Aucun modèle entraîné pour '{symbol}' », « Paire de trading introuvable »). "
         "Le test qui attendait le code 500 a été corrigé pour attendre 404, et un second test a été "
         "ajouté pour couvrir le second point d'entrée du même défaut (paire inconnue de "
