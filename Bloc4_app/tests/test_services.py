@@ -103,6 +103,30 @@ class TestDashboardService:
         result = service.get_predictions(1, "daily")
         assert len(result) == 1
 
+    @patch("dashboard.services.requests.post")
+    def test_get_token_passes_timeout(self, mock_post):
+        mock_post.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"access_token": "fake-token"},
+        )
+
+        service = DashboardService()
+        service._get_token()
+        assert mock_post.call_args.kwargs["timeout"] == 10
+
+    @patch("dashboard.services.requests.get")
+    @patch("dashboard.services.requests.post")
+    def test_get_ohlcv_passes_timeout(self, mock_post, mock_get):
+        mock_post.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"access_token": "token"},
+        )
+        mock_get.return_value = MagicMock(status_code=200, json=lambda: [])
+
+        service = DashboardService()
+        service.get_ohlcv(1, "daily")
+        assert mock_get.call_args.kwargs["timeout"] == 10
+
 
 class TestForecastService:
     @patch("forecast.services.requests.post")

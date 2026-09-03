@@ -3,6 +3,8 @@
 import requests
 from django.conf import settings
 
+REQUEST_TIMEOUT = 10
+
 
 class DashboardService:
     def __init__(self):
@@ -15,6 +17,7 @@ class DashboardService:
         response = requests.post(
             f"{self.base_url}/api/v1/authentification/login",
             data={"username": settings.E1_SERVICE_USERNAME, "password": settings.E1_SERVICE_PASSWORD},
+            timeout=REQUEST_TIMEOUT,
         )
         if response.status_code == 200:
             self._token = response.json()["access_token"]
@@ -29,6 +32,7 @@ class DashboardService:
             f"{self.base_url}/api/v1/trading_pairs/trading_pair_by_currency_symbols",
             params={"base": base_symbol, "quote": quote_symbol},
             headers=self._headers(),
+            timeout=REQUEST_TIMEOUT,
         )
         if response.status_code == 200:
             return response.json()
@@ -40,6 +44,7 @@ class DashboardService:
             f"{self.base_url}/api/v1/ohlcv/{endpoint}",
             params={"trading_pair_id": trading_pair_id},
             headers=self._headers(),
+            timeout=REQUEST_TIMEOUT,
         )
         if response.status_code == 200:
             return response.json()
@@ -50,6 +55,7 @@ class DashboardService:
         response = requests.get(
             f"{self.base_url}/api/v1/predictions/{endpoint}/{trading_pair_id}",
             headers=self._headers(),
+            timeout=REQUEST_TIMEOUT,
         )
         if response.status_code == 200:
             return response.json()
