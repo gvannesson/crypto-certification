@@ -139,8 +139,12 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
+      # Version épinglée volontairement : sans contrainte, uv installe le dernier
+      # ruff publié, dont le jeu de règles par défaut change entre versions mineures
+      # (0.16 en a activé de nouvelles et a fait échouer ce job sans qu'une ligne de
+      # code ait bougé). Un linter non épinglé rend la CI non reproductible.
       - name: Install ruff
-        run: uv tool install ruff
+        run: uv tool install ruff==0.15.12
 
       - name: Lint Bloc1_data
         run: ruff check Bloc1_data/src/ --output-format=github
