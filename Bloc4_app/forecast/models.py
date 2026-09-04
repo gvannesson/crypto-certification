@@ -1,1 +1,1 @@
-from django.db import models
+# Aucun modèle propre : forecast interroge ml-api à la demande (cf. ForecastService).

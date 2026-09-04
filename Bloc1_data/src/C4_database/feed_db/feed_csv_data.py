@@ -3,7 +3,6 @@ import os
 
 import pandas as pd
 
-from src.C4_database.database import Database
 from src.settings import logger, LogSettings
 
 

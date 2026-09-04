@@ -2,9 +2,8 @@
 
 import pandas as pd
 import pandas_ta as ta
-import numpy as np
 
-from src.settings import MLSettings, logger
+from src.settings import MLSettings
 
 
 def build_features(df, granularity_type, feature_lags, include_target=True):

@@ -39,7 +39,7 @@ class DashboardService:
         return None
 
     def get_ohlcv(self, trading_pair_id, granularity="daily"):
-        endpoint = f"hourly_by_trading_pair_id" if granularity == "hourly" else "daily_by_trading_pair_id"
+        endpoint = "hourly_by_trading_pair_id" if granularity == "hourly" else "daily_by_trading_pair_id"
         response = requests.get(
             f"{self.base_url}/api/v1/ohlcv/{endpoint}",
             params={"trading_pair_id": trading_pair_id},

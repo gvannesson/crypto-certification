@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 
-from src.settings import DataSettings, logger
+from src.settings import DataSettings
 from src.utils.functions import get_jwt_token
 
 

@@ -2,11 +2,11 @@
 
 import pandas as pd
 import numpy as np
-from sklearn.metrics import accuracy_score, f1_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, f1_score
 
 from src.model.train_model import train_model
 from src.utils.functions import generate_test_periods
-from src.settings import MLSettings, logger
+from src.settings import MLSettings
 
 LABELS = MLSettings.classification["labels"]
 

@@ -4,7 +4,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, Session
 
 from src.C4_database.models import (
-    Base,
     Currency,
     TradingPair,
     Exchange,

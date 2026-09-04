@@ -1,1 +1,1 @@
-from django.db import models
+# Aucun modèle propre : dashboard lit les données via data-api (cf. DashboardService).

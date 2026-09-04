@@ -10,8 +10,8 @@ import uvicorn
 ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.append(str(ROOT_DIR))
 
-from src.settings import logger
-from src.api.routes import classify, login
+from src.settings import logger  # noqa: E402
+from src.api.routes import classify, login  # noqa: E402
 
 app = FastAPI(
     title="Bloc3 ML API - Classification de Tendance Crypto",

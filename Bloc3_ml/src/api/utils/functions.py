@@ -7,7 +7,7 @@ import requests
 import pandas as pd
 from fastapi import HTTPException
 
-from src.settings import DataSettings, SecretSettings, logger
+from src.settings import DataSettings, SecretSettings
 from src.features.build_features import build_features
 
 

@@ -8,8 +8,8 @@ import uvicorn
 ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.append(str(ROOT_DIR))
 
-from src.settings import logger
-from src.C5_api.routes import login, ohlcv, trading_pairs, predictions, currencies, exchanges
+from src.settings import logger  # noqa: E402
+from src.C5_api.routes import login, ohlcv, trading_pairs, predictions, currencies, exchanges  # noqa: E402
 
 app = FastAPI(
     title="Bloc1 Data API - Classification de Tendance Crypto",

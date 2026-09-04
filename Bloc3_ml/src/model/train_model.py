@@ -1,8 +1,6 @@
 """Entraînement du modèle de classification."""
 
-import pandas as pd
 
-from src.settings import logger
 
 
 def train_model(classifier, train_end_date):
